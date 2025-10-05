@@ -1,3 +1,12 @@
+team: The Spacelings( Protocol )
+Team Members:
+Saiesh Gaonkar
+Kushal Naik
+Yogesh Yadav
+
+
+
+
 # SharkSight: Predicting Human-Shark Encounter Risk (Prototype)
 
 ## 🌊 Project Overview
