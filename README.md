@@ -19,7 +19,7 @@ Yogesh Yadav
 
 For this initial prototype, we have successfully developed and hosted the **Front-End Application** and created a fully functional **Machine Learning Model** in a Google Colab notebook. The model generated the risk using only the chlorophyll data 
 
-we are using modis-aqua date in the range of 2012 - 2024 ... which is also the data range of the shark tag data
+we are using modis-aqua date in the range of 2012 - 2024 ... which is also the date range of the shark tag data
 
 The core goal is to showcase how a simple, rapidly trained **Logistic Regression Model** (trained on NASA Earth Data) can be translated into **actionable, intuitive intelligence** via a clear risk heatmap and a **Risk Status** (LOW, MODERATE, HIGH) dial.
 
