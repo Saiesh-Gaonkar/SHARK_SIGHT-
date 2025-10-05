@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharkSight - Ocean Risk Assessment</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0a0e27;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+        
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .modal-overlay.hidden {
+            display: none;
+        }
+        
+        /* Modal Content */
+        .modal {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 540px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 24px;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .warning-badge {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        .close-button {
+            background: rgba(71, 85, 105, 0.2);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #94a3b8;
+        }
+        
+        .close-button:hover {
+            background: rgba(71, 85, 105, 0.4);
+            color: #e2e8f0;
+            transform: scale(1.05);
+        }
+        
+        .modal-content {
+            color: #cbd5e1;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+        
+        .disclaimer-section {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        
+        .disclaimer-title {
+            color: #f87171;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .disclaimer-text {
+            color: #fca5a5;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info-section {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+        }
+        
+        .info-title {
+            color: #e2e8f0;
+            font-weight: 600;
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+        
+        .link-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .link-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+        }
+        
+        .link-card:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateX(4px);
+        }
+        
+        .link-card-title {
+            color: #3b82f6;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .link-card-description {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        
+        .modal-footer {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(71, 85, 105, 0.3);
+        }
+        
+        .understand-button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .understand-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            width: 380px;
+            z-index: 1000;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .app-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .app-subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: rgba(30, 41, 59, 1);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .data-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            width: 320px;
+            z-index: 1000;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            display: none;
+        }
+        
+        .data-panel.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .data-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #e2e8f0;
+        }
+        
+        .data-item {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .data-label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        
+        .data-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #f1f5f9;
+        }
+        
+        .data-unit {
+            font-size: 14px;
+            color: #64748b;
+            margin-left: 4px;
+        }
+        
+        .risk-gauge {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(71, 85, 105, 0.3);
+        }
+        
+        .gauge-container {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            margin: 20px 0;
+        }
+        
+        .gauge-svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .risk-label {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 12px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .risk-low {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .risk-moderate {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        .risk-high {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .shark-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        
+        .shark-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .shark-present {
+            background: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        
+        .shark-absent {
+            background: #22c55e;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 currentColor;
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+            }
+        }
+        
+        .error-message {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 8px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Disclaimer Modal -->
+    <div class="modal-overlay" id="disclaimerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">
+                        <span>⚠️</span>
+                        <span>Important Notice</span>
+                    </div>
+                    <span class="warning-badge">Prototype Demo</span>
+                </div>
+                <div class="close-button" onclick="closeModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="modal-content">
+                <p>Welcome to <strong>SharkSight</strong>, an ocean risk assessment system prototype developed for the NASA Space Apps Challenge.</p>
+                
+                <div class="disclaimer-section">
+                    <div class="disclaimer-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Disclaimer
+                    </div>
+                    <div class="disclaimer-text">
+                        This is a demonstration prototype. All data displayed including chlorophyll concentrations, sea surface temperatures, shark presence indicators, and risk assessments are <strong>simulated dummy data</strong> for demonstration purposes only. Do not use this information for actual marine navigation or safety decisions.
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <div class="info-title">Learn More About SharkSight</div>
+                    <div class="link-cards">
+                        <a href="https://github.com/Saiesh-Gaonkar/SHARK_SIGHT-" target="_blank" class="link-card">
+                            <div class="link-card-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                                </svg>
+                                GitHub Repository
+                            </div>
+                            <div class="link-card-description">
+                                View the complete project source code, documentation, and contribute to the development
+                            </div>
+                        </a>
+                        
+                        <a href="https://colab.research.google.com/drive/1899uw2UbNj5owEqx7nOzQHiIHh_BbKT7?usp=sharing" target="_blank" class="link-card">
+                            <div class="link-card-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 11l3 3L22 4"></path>
+                                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                                </svg>
+                                ML Model (Google Colab)
+                            </div>
+                            <div class="link-card-description">
+                                Explore our machine learning model that predicts shark presence using NASA Earth data and logistic regression
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <p style="margin-top: 20px; font-size: 14px; color: #94a3b8;">
+                    The production version will integrate real NASA satellite data including PACE (Plankton, Aerosol, Cloud, ocean Ecosystem) data, actual sea surface temperatures, and our trained AI model for accurate risk assessment.
+                </p>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="understand-button" onclick="closeModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    I Understand - Continue to Demo
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="control-panel">
+        <div class="app-title">
+            🦈 SharkSight
+        </div>
+        <div class="app-subtitle">Ocean Risk Assessment System</div>
+        
+        <div class="input-group">
+            <label class="input-label">Ocean Coordinates</label>
+            <div class="input-wrapper">
+                <input type="number" id="latitude" placeholder="Latitude" min="-90" max="90" step="0.0001">
+                <input type="number" id="longitude" placeholder="Longitude" min="-180" max="180" step="0.0001">
+            </div>
+            <div class="error-message" id="error-message"></div>
+        </div>
+        
+        <button onclick="analyzeLocation()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+            </svg>
+            Analyze Risk
+        </button>
+    </div>
+    
+    <div class="data-panel" id="dataPanel">
+        <div class="data-title">Environmental Data</div>
+        
+        <div class="data-item">
+            <div class="data-label">Chlorophyll-a Concentration</div>
+            <div class="data-value">
+                <span id="chlorophyll">--</span>
+                <span class="data-unit">mg/m³</span>
+            </div>
+        </div>
+        
+        <div class="data-item">
+            <div class="data-label">Sea Surface Temperature</div>
+            <div class="data-value">
+                <span id="sst">--</span>
+                <span class="data-unit">°C</span>
+            </div>
+        </div>
+        
+        <div class="shark-indicator">
+            <div class="shark-dot" id="sharkDot"></div>
+            <span id="sharkStatus">Checking shark presence...</span>
+        </div>
+        
+        <div class="risk-gauge">
+            <div class="data-label" style="text-align: center; margin-bottom: 12px;">ENCOUNTER RISK INDEX</div>
+            <div class="gauge-container">
+                <svg class="gauge-svg" id="riskGauge"></svg>
+            </div>
+            <div class="risk-label" id="riskLabel">--</div>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([25, -70], 4);
+        
+        // Add ocean-focused tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors, © CARTO',
+            maxZoom: 19
+        }).addTo(map);
+        
+        let currentMarker = null;
+        let currentCircle = null;
+        
+        // Function to close the modal
+        function closeModal() {
+            const modal = document.getElementById('disclaimerModal');
+            modal.style.animation = 'fadeOut 0.3s forwards';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+        
+        // Simple ocean check (very basic - checks if not on major landmasses)
+        function isOceanCoordinate(lat, lng) {
+            // This is a simplified check - in production, you'd use a proper ocean/land database
+            // Exclude major continental areas
+            if (lat > 30 && lat < 50 && lng > -130 && lng < -70) return true; // North Atlantic
+            if (lat > -60 && lat < 30 && lng > -90 && lng < -30) return true; // Atlantic
+            if (lat > -60 && lat < 60 && lng > 30 && lng < 150) return true; // Indian/Pacific
+            if (lat > -60 && lat < 60 && lng > -180 && lng < -70) return true; // Pacific
+            return true; // For demo purposes, allowing most coordinates
+        }
+        
+        // Generate dummy environmental data based on coordinates
+        function generateEnvironmentalData(lat, lng) {
+            // Use coordinates to seed pseudo-random but consistent data
+            const seed = Math.abs((lat * 1000 + lng * 1000) % 100) / 100;
+            
+            // Chlorophyll varies by latitude and season
+            const latitudeFactor = 1 - Math.abs(lat) / 90;
+            const chlorophyll = (0.1 + seed * 2 + latitudeFactor * 3).toFixed(2);
+            
+            // SST varies by latitude
+            const baseTemp = 28 - Math.abs(lat) * 0.4;
+            const sst = (baseTemp + seed * 5 - 2.5).toFixed(1);
+            
+            // Shark presence probability based on environmental factors
+            const sharkProbability = (parseFloat(chlorophyll) > 1.5 && parseFloat(sst) > 15 && parseFloat(sst) < 25) 
+                ? 0.7 + seed * 0.3 
+                : 0.2 + seed * 0.3;
+            
+            const sharkPresent = sharkProbability > 0.5;
+            
+            // Calculate risk based on multiple factors
+            let riskScore = 0;
+            if (sharkPresent) riskScore += 40;
+            if (parseFloat(chlorophyll) > 2) riskScore += 20;
+            if (parseFloat(sst) > 18 && parseFloat(sst) < 24) riskScore += 20;
+            riskScore += seed * 20;
+            
+            return {
+                chlorophyll: chlorophyll,
+                sst: sst,
+                sharkPresent: sharkPresent,
+                riskScore: Math.min(100, Math.max(0, riskScore))
+            };
+        }
+        
+        // Draw speedometer gauge
+        function drawGauge(value) {
+            const svg = document.getElementById('riskGauge');
+            const width = 280;
+            const height = 180;
+            const centerX = width / 2;
+            const centerY = height - 20;
+            const radius = 100;
+            
+            // Clear previous gauge
+            svg.innerHTML = '';
+            
+            // Create gauge arc
+            const startAngle = -180;
+            const endAngle = 0;
+            const angleRange = endAngle - startAngle;
+            
+            // Background arc
+            const bgArc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            bgArc.setAttribute('d', describeArc(centerX, centerY, radius, startAngle, endAngle));
+            bgArc.setAttribute('fill', 'none');
+            bgArc.setAttribute('stroke', 'rgba(71, 85, 105, 0.3)');
+            bgArc.setAttribute('stroke-width', '20');
+            bgArc.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(bgArc);
+            
+            // Value arc
+            const valueAngle = startAngle + (value / 100) * angleRange;
+            const valueArc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            valueArc.setAttribute('d', describeArc(centerX, centerY, radius, startAngle, valueAngle));
+            valueArc.setAttribute('fill', 'none');
+            valueArc.setAttribute('stroke', getGaugeColor(value));
+            valueArc.setAttribute('stroke-width', '20');
+            valueArc.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(valueArc);
+            
+            // Add tick marks
+            for (let i = 0; i <= 100; i += 20) {
+                const tickAngle = startAngle + (i / 100) * angleRange;
+                const tickRad = (tickAngle * Math.PI) / 180;
+                const x1 = centerX + Math.cos(tickRad) * (radius - 15);
+                const y1 = centerY + Math.sin(tickRad) * (radius - 15);
+                const x2 = centerX + Math.cos(tickRad) * (radius + 15);
+                const y2 = centerY + Math.sin(tickRad) * (radius + 15);
+                
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', x1);
+                tick.setAttribute('y1', y1);
+                tick.setAttribute('x2', x2);
+                tick.setAttribute('y2', y2);
+                tick.setAttribute('stroke', 'rgba(148, 163, 184, 0.5)');
+                tick.setAttribute('stroke-width', '2');
+                svg.appendChild(tick);
+            }
+            
+            // Add needle
+            const needleAngle = startAngle + (value / 100) * angleRange;
+            const needleRad = (needleAngle * Math.PI) / 180;
+            const needleX = centerX + Math.cos(needleRad) * (radius - 25);
+            const needleY = centerY + Math.sin(needleRad) * (radius - 25);
+            
+            const needle = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            needle.setAttribute('x1', centerX);
+            needle.setAttribute('y1', centerY);
+            needle.setAttribute('x2', needleX);
+            needle.setAttribute('y2', needleY);
+            needle.setAttribute('stroke', '#fff');
+            needle.setAttribute('stroke-width', '3');
+            needle.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(needle);
+            
+            // Center circle
+            const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            centerCircle.setAttribute('cx', centerX);
+            centerCircle.setAttribute('cy', centerY);
+            centerCircle.setAttribute('r', '8');
+            centerCircle.setAttribute('fill', '#3b82f6');
+            svg.appendChild(centerCircle);
+            
+            // Add value text
+            const valueText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            valueText.setAttribute('x', centerX);
+            valueText.setAttribute('y', centerY - 30);
+            valueText.setAttribute('text-anchor', 'middle');
+            valueText.setAttribute('fill', '#fff');
+            valueText.setAttribute('font-size', '32');
+            valueText.setAttribute('font-weight', 'bold');
+            valueText.textContent = Math.round(value);
+            svg.appendChild(valueText);
+        }
+        
+        function describeArc(x, y, radius, startAngle, endAngle) {
+            const start = polarToCartesian(x, y, radius, endAngle);
+            const end = polarToCartesian(x, y, radius, startAngle);
+            const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+            return [
+                "M", start.x, start.y,
+                "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y
+            ].join(" ");
+        }
+        
+        function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+            const angleInRadians = (angleInDegrees * Math.PI) / 180.0;
+            return {
+                x: centerX + (radius * Math.cos(angleInRadians)),
+                y: centerY + (radius * Math.sin(angleInRadians))
+            };
+        }
+        
+        function getGaugeColor(value) {
+            if (value < 35) return '#22c55e';
+            if (value < 65) return '#fbbf24';
+            return '#ef4444';
+        }
+        
+        function getRiskLevel(score) {
+            if (score < 35) return { level: 'LOW', class: 'risk-low' };
+            if (score < 65) return { level: 'MODERATE', class: 'risk-moderate' };
+            return { level: 'HIGH', class: 'risk-high' };
+        }
+        
+        function analyzeLocation() {
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const lng = parseFloat(document.getElementById('longitude').value);
+            const errorMsg = document.getElementById('error-message');
+            
+            // Validation
+            if (isNaN(lat) || isNaN(lng)) {
+                errorMsg.textContent = 'Please enter valid coordinates';
+                errorMsg.classList.add('show');
+                return;
+            }
+            
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                errorMsg.textContent = 'Coordinates out of range';
+                errorMsg.classList.add('show');
+                return;
+            }
+            
+            if (!isOceanCoordinate(lat, lng)) {
+                errorMsg.textContent = 'Please enter ocean coordinates only';
+                errorMsg.classList.add('show');
+                return;
+            }
+            
+            errorMsg.classList.remove('show');
+            
+            // Clear previous markers
+            if (currentMarker) map.removeLayer(currentMarker);
+            if (currentCircle) map.removeLayer(currentCircle);
+            
+            // Add new marker
+            currentMarker = L.marker([lat, lng]).addTo(map);
+            currentCircle = L.circle([lat, lng], {
+                color: '#3b82f6',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.1,
+                radius: 50000
+            }).addTo(map);
+            
+            // Pan to location
+            map.flyTo([lat, lng], 8, {
+                duration: 1.5
+            });
+            
+            // Generate and display data
+            const data = generateEnvironmentalData(lat, lng);
+            
+            // Update data panel
+            document.getElementById('chlorophyll').textContent = data.chlorophyll;
+            document.getElementById('sst').textContent = data.sst;
+            
+            // Update shark indicator
+            const sharkDot = document.getElementById('sharkDot');
+            const sharkStatus = document.getElementById('sharkStatus');
+            
+            if (data.sharkPresent) {
+                sharkDot.className = 'shark-dot shark-present';
+                sharkStatus.textContent = 'Shark presence detected';
+                sharkStatus.style.color = '#ef4444';
+            } else {
+                sharkDot.className = 'shark-dot shark-absent';
+                sharkStatus.textContent = 'No shark presence detected';
+                sharkStatus.style.color = '#22c55e';
+            }
+            
+            // Update risk gauge
+            drawGauge(data.riskScore);
+            
+            // Update risk label
+            const risk = getRiskLevel(data.riskScore);
+            const riskLabel = document.getElementById('riskLabel');
+            riskLabel.textContent = risk.level + ' RISK';
+            riskLabel.className = 'risk-label ' + risk.class;
+            
+            // Show data panel
+            document.getElementById('dataPanel').classList.add('active');
+        }
+        
+        // Add example coordinates for testing
+        document.getElementById('latitude').placeholder = 'e.g., 41.5';
+        document.getElementById('longitude').placeholder = 'e.g., -70.5';
+    </script>
+</body>
+</html>
